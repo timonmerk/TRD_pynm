@@ -75,6 +75,10 @@ PLS_VS_UNPLS = False
 PLS_VS_UNPLS_VS_NTR = False
 PLS_VS_UNPLS_VS_NTR_VS_REST = False
 
+FFT_ONLY = False
+SW_ONLY = False
+FFT_SW_ONLY = False
+
 for sub in subjects:
     analyzer = nm_analysis.Feature_Reader(
         feature_dir=PATH_FEATURES,
@@ -124,14 +128,15 @@ for sub in subjects:
 
     feature_names = []
     for f in analyzer.feature_arr.columns:
-        if "fft" in f:
+        if (FFT_ONLY is True or FFT_SW_ONLY is True) and "fft" in f:
             feature_names.append(f)
-        else:
+        if SW_ONLY is True or FFT_SW_ONLY is True:
             for k in SW_Features_Select:
                 if k in f:
                     feature_names.append(f)
 
-    analyzer.feature_arr = analyzer.feature_arr[feature_names]
+    if len(feature_names) > 0:
+        analyzer.feature_arr = analyzer.feature_arr[feature_names]
 
     analyzer.feature_arr.columns = list(
         map(fix_name_columns, analyzer.feature_arr.columns)
@@ -146,9 +151,9 @@ for sub in subjects:
         ),  #
         # model=xgboost.XGBClassifier(),  # ,   # catboost.CatBoostClassifier(),
         eval_method=metrics.balanced_accuracy_score,
-        cv_method= model_selection.KFold(
-        n_splits=3, random_state=None, shuffle=False
-        ), # "NonShuffledTrainTestSplit"
+        cv_method= "NonShuffledTrainTestSplit", #model_selection.KFold(
+        #n_splits=3, random_state=None, shuffle=False
+        #), # 
         get_movement_detection_rate=True,
         mov_detection_threshold=0.5,
         min_consequent_count=3,
@@ -160,15 +165,15 @@ for sub in subjects:
         VERBOSE=False,
         undersampling=False,
         oversampling=True,
-        mrmr_select=False,
+        mrmr_select=True,
         cca=False,
         pca=False,
     )
 
-    analyzer.decoder.feature_names = list(analyzer.decoder.features.columns)
+    #analyzer.decoder.feature_names = list(analyzer.decoder.features.columns)
 
     performances = analyzer.run_ML_model(
-        estimate_channels=True, estimate_all_channels_combined=True
+        estimate_channels=False, estimate_all_channels_combined=True
     )
 
     df = analyzer.get_dataframe_performances(performances)
@@ -354,45 +359,6 @@ def boxplot_coef(feature_names: list):
         hue=None,
         PATH_SAVE=r"C:\Users\ICN_admin\Documents\TRD Analysis\30_05\results_paper_figures_2\LM_fft_coef_sub.png",
     )
-
-
-def plot_performance_feature_comparison():
-
-    df_sw = pd.read_pickle("df_Sharpwave.p")
-    df_fft = pd.read_pickle("df_fft.p")
-    df_swfft = pd.read_pickle("df_fft_sw.p")
-    df_sw["features_used"] = "Sharpwave"
-    df_fft["features_used"] = "fft"
-    df_swfft["features_used"] = "Sharpwave_fft"
-
-    df_ind_ch = df_sw.query("ch_type == 'electrode ch'").reset_index()
-    idx = df_ind_ch.groupby(["sub"])["performance_test"].idxmax()
-    df_sw_best = df_ind_ch.iloc[idx]
-
-    df_ind_ch = df_fft.query("ch_type == 'electrode ch'").reset_index()
-    idx = df_ind_ch.groupby(["sub"])["performance_test"].idxmax()
-    df_fft_best = df_ind_ch.iloc[idx]
-
-    df_ind_ch = df_swfft.query("ch_type == 'electrode ch'").reset_index()
-    idx = df_ind_ch.groupby(["sub"])["performance_test"].idxmax()
-    df_swfft_best = df_ind_ch.iloc[idx]
-
-    df_comb = pd.concat([df_sw, df_fft, df_swfft])
-    df_comb_ind = pd.concat([df_sw_best, df_fft_best, df_swfft_best])
-
-    df_plt = pd.concat(
-        [df_comb.query("ch_type == 'all ch combinded'"), df_comb_ind]
-    )
-
-    nm_plots.plot_df_subjects(
-        df=df_plt,
-        y_col="performance_test",
-        x_col="ch_type",
-        hue="features_used",
-        title="best channel performances",
-        PATH_SAVE=r"C:\Users\ICN_admin\Documents\TRD Analysis\30_05\results_paper_figures_2\LM_comp_per_best_ind.png",
-    )
-
 
 def plt_mean_accuracies_over_time(mean_acc: dict):
 

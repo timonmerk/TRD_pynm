@@ -161,3 +161,6 @@ examples/data/derivatives/sub-testsub_ses-EphysMedOff_task-buttonpress_run-0_iee
 
 *.mat
 *.nii
+*.pdf
+*.p
+*.fibfilt

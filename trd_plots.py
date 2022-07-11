@@ -1,5 +1,5 @@
 import enum
-from py_neuromodulation import nm_decode, nm_analysis, nm_plots
+from py_neuromodulation import nm_decode, nm_analysis, nm_plots, nm_stats
 
 import pandas as pd
 import numpy as np
@@ -17,8 +17,90 @@ from sklearn import (
 )
 from matplotlib import pyplot as plt
 from imblearn import over_sampling
-
 PATH_RESULTS = r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\results\results_comp_labels"
+PATH_OUT = r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\results\results_ntr_vs_emotion\update_Figures_11_07_22"
+
+def plot_performance_feature_comparison():
+
+    df_sw = pd.read_pickle(os.path.join(PATH_RESULTS, "df_sw_ntr_vs_plsunpls.p"))
+    df_fft = pd.read_pickle(os.path.join(PATH_RESULTS, "df_fft_ntr_vs_plsunpls.p"))
+    df_swfft = pd.read_pickle(os.path.join(PATH_RESULTS, "df_sw_fft_ntr_vs_plsunpls.p"))
+    df_sw["features_used"] = "Sharpwave"
+    df_fft["features_used"] = "fft"
+    df_swfft["features_used"] = "Sharpwave_fft"
+
+    df_ind_ch = df_sw.query("ch_type == 'electrode ch'").reset_index()
+    idx = df_ind_ch.groupby(["sub"])["performance_test"].idxmax()
+    df_sw_best = df_ind_ch.iloc[idx]
+
+    df_ind_ch = df_fft.query("ch_type == 'electrode ch'").reset_index()
+    idx = df_ind_ch.groupby(["sub"])["performance_test"].idxmax()
+    df_fft_best = df_ind_ch.iloc[idx]
+
+    df_ind_ch = df_swfft.query("ch_type == 'electrode ch'").reset_index()
+    idx = df_ind_ch.groupby(["sub"])["performance_test"].idxmax()
+    df_swfft_best = df_ind_ch.iloc[idx]
+
+    df_comb = pd.concat([df_sw, df_fft, df_swfft])
+    df_comb_ind = pd.concat([df_sw_best, df_fft_best, df_swfft_best])
+
+    df_plt = pd.concat(
+        [df_comb.query("ch_type == 'all ch combinded'"), df_comb_ind]
+    )
+
+    df=df_comb_ind # df_plt
+    df = df.reset_index()
+    y_col="performance_test"
+    x_col="ch_type"
+    x_col="features_used"
+    title="best channel performances",
+    PATH_SAVE = os.path.join(PATH_RESULTS, "LM_comp_per_best_ind_diff.png")
+
+    alpha_box = 0.4
+    plt.figure(figsize=(5, 3), dpi=300)
+    sb.boxplot(
+        x=x_col,
+        y=y_col,
+        #hue=hue,
+        data=df,
+        palette="viridis",
+        showmeans=False,
+        boxprops=dict(alpha=alpha_box),
+        showcaps=True,
+        showbox=True,
+        showfliers=False,
+        notch=False,
+        whiskerprops={"linewidth": 2, "zorder": 10, "alpha": alpha_box},
+        capprops={"alpha": alpha_box},
+        medianprops=dict(
+            linestyle="-", linewidth=5, color="gray", alpha=alpha_box
+        ),
+    )
+
+    ax = sb.stripplot(
+        x=x_col,
+        y=y_col,
+        #hue=hue,
+        data=df,
+        palette="viridis",
+        jitter=False,
+        s=5,
+    )
+
+    arr_plt = np.array([df.query("features_used == 'Sharpwave'")["performance_test"],
+    df.query("features_used == 'fft'")["performance_test"],
+    df.query("features_used == 'Sharpwave_fft'")["performance_test"]])
+
+    for i in range(arr_plt.shape[1]):
+        plt.plot(arr_plt[:,i], color="gray", linewidth=1, alpha=0.2)
+
+    plt.ylim(0.5,)
+
+    plt.savefig(
+        os.path.join(PATH_RESULTS, "comp_fft_sw_features.pdf"),
+        bbox_inches="tight",
+    )
+
 
 # 1. load dataframe for plotting
 df = pd.read_pickle(os.path.join(PATH_RESULTS, "df_sw_fft_ntr_vs_plsunpls.p"))
@@ -65,12 +147,23 @@ df_ind_ch["bdi_change"] = df_ind_ch.sub_str.map(bdi_change_mapping)
 idx = df_ind_ch.groupby(["sub"])["InnerCV_performance_test"].idxmax()
 df_mean_sub_ind_ch = df_ind_ch.iloc[idx]
 
-nm_plots.reg_plot(
-    x_col="performance_test", y_col="bdi_change", data=df_mean_sub_ind_ch
+x_col="performance_test"
+y_col="bdi_change"
+data=df_mean_sub_ind_ch
+plt.figure(figsize=(3,4), dpi=300)
+rho, p = nm_stats.permutationTestSpearmansRho(
+    data[x_col],
+    data[y_col],
+    False,
+    "R^2",
+    5000,
 )
+sb.regplot(x=x_col, y=y_col, data=data)
+plt.title(f"{y_col}~{x_col} p={np.round(p, 2)} rho={np.round(rho, 2)}")
+
 
 plt.savefig(
-    os.path.join(PATH_RESULTS, "corr_bdi_change_dbs.pdf"),
+    os.path.join(PATH_OUT, "corr_bdi_change_dbs.pdf"),
     bbox_inches="tight",
 )
 
@@ -135,10 +228,10 @@ def plt_coef():
 # plt subject individual performances
 def plt_performances_sub():
     nm_plots.plot_df_subjects(
-            df=df,
+            df=df_plt,
             y_col="performance_test",
             x_col="sub",
-            hue="ch_type",
+            hue=None,#"ch_type"
             title="best channel performances",
             PATH_SAVE=None
         )

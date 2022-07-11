@@ -1,7 +1,6 @@
-addpath('C:\Users\ICN_admin\Documents\wjn_toolbox');
-addpath(genpath('C:\Users\ICN_admin\Documents\leaddbs'));
-addpath(genpath('C:\Users\ICN_admin\Documents\spm12'));
-
+addpath('C:\code\wjn_toolbox');
+addpath(genpath('C:\code\leaddbs'));
+addpath(genpath('C:\code\spm12'));
 csvfile = "electrodes.csv";
 
 
