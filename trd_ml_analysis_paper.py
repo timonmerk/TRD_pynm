@@ -42,7 +42,7 @@ subjects = [
     for f in os.listdir(PATH_FEATURES)
     if f.startswith("effspm8") and "KSC" not in f
 ]
-GET_AVG_LABEL = True
+GET_AVG_LABEL = False
 pd_data = []
 
 PLS = -2
@@ -70,12 +70,14 @@ SW_Features_Select = [
 roc_res = {}
 cm_res = {}
 
-NTR_VS_EMOTION = True
+FIX_LABEL_TO_3500ms = False
+
+NTR_VS_EMOTION = False
 PLS_VS_UNPLS = False
 PLS_VS_UNPLS_VS_NTR = False
-PLS_VS_UNPLS_VS_NTR_VS_REST = False
+PLS_VS_UNPLS_VS_NTR_VS_REST = True
 
-FFT_ONLY = False
+FFT_ONLY = True
 SW_ONLY = False
 FFT_SW_ONLY = False
 
@@ -85,6 +87,16 @@ for sub in subjects:
         feature_file=sub,
         binarize_label=False,
     )
+
+    if FIX_LABEL_TO_3500ms is True:
+        # fix labels ranging 3.5s
+        label_new = np.copy(analyzer.label)
+        jumps = np.diff(analyzer.label)
+        idx_fix = np.where(jumps > 0)[0]
+        for idx in idx_fix:
+            for i in range(25):
+                label_new[idx+10+i] = jumps[idx]
+        analyzer.feature_arr["ALL"] = label_new
 
     if NTR_VS_EMOTION is True:
         idx_select = analyzer.feature_arr["ALL"] != 0
@@ -154,7 +166,7 @@ for sub in subjects:
         cv_method= "NonShuffledTrainTestSplit", #model_selection.KFold(
         #n_splits=3, random_state=None, shuffle=False
         #), # 
-        get_movement_detection_rate=True,
+        get_movement_detection_rate=False,
         mov_detection_threshold=0.5,
         min_consequent_count=3,
         threshold_score=False,
@@ -165,7 +177,7 @@ for sub in subjects:
         VERBOSE=False,
         undersampling=False,
         oversampling=True,
-        mrmr_select=True,
+        mrmr_select=False,
         cca=False,
         pca=False,
     )
@@ -173,7 +185,7 @@ for sub in subjects:
     #analyzer.decoder.feature_names = list(analyzer.decoder.features.columns)
 
     performances = analyzer.run_ML_model(
-        estimate_channels=False, estimate_all_channels_combined=True
+        estimate_channels=True, estimate_all_channels_combined=False
     )
 
     df = analyzer.get_dataframe_performances(performances)
@@ -206,13 +218,13 @@ for sub in subjects:
             y_te_pr_epochs, y_te_epochs = analyzer.get_epochs(
                 np.expand_dims(y_te_pr, axis=(1, 2)),
                 y_te,
-                epoch_len=6,
+                epoch_len=7,
                 sfreq=10,
                 threshold=0.1,
             )
             y_te_pr_epochs = np.squeeze(y_te_pr_epochs)
             acc_ = (
-                np.sum(y_te_pr_epochs[:, 30:] == 1, axis=0)
+                np.sum(y_te_pr_epochs[:, 35:] == 1, axis=0)
                 / y_te_epochs.shape[0]
             )
             label_out[label_] = acc_
@@ -226,19 +238,19 @@ for sub in subjects:
 
     try:
         for ch in analyzer.decoder.ch_ind_results.keys():
-            fpr, tpr, thr = metrics.roc_curve(
-                analyzer.decoder.ch_ind_results[ch]["y_test"][0],
-                analyzer.decoder.ch_ind_results[ch]["y_test_pr"][0][:, 1],
-            )
+            #fpr, tpr, thr = metrics.roc_curve(
+            #    analyzer.decoder.ch_ind_results[ch]["y_test"][0],
+            #    analyzer.decoder.ch_ind_results[ch]["y_test_pr"][0][:, 1],
+            #)
 
-            roc_res[sub][ch] = {}
-            roc_res[sub][ch]["fpr"] = fpr
-            roc_res[sub][ch]["tpr"] = tpr
-            roc_res[sub][ch]["thr"] = thr
+            #roc_res[sub][ch] = {}
+            #roc_res[sub][ch]["fpr"] = fpr
+            #roc_res[sub][ch]["tpr"] = tpr
+            #roc_res[sub][ch]["thr"] = thr
 
             cm_res[sub][ch] = metrics.confusion_matrix(
-                analyzer.decoder.ch_ind_results[ch]["y_test"][0],
-                np.rint(analyzer.decoder.ch_ind_results[ch]["y_test_pr"][0][:, 1]),
+                analyzer.decoder.ch_ind_results[ch]["y_test"][0],  #-1 for 3 class
+                np.argmax(analyzer.decoder.ch_ind_results[ch]["y_test_pr"][0], axis=1),
                 normalize="true",
             )
     except:
@@ -257,6 +269,38 @@ with open(os.path.join(PATH_RESULTS, 'cm_res.pickle'), 'wb') as handle:
 
 with open(os.path.join(PATH_RESULTS, 'mean_acc.pickle'), 'wb') as handle:
     pickle.dump(mean_acc, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+
+# multiclass confusion matrix:
+df_ind_ch = df.query("ch_type == 'electrode ch'").reset_index()
+idx = df_ind_ch.groupby(["sub"])["InnerCV_performance_test"].idxmax()
+df_best_sub_ind_ch = df_ind_ch.iloc[idx]
+cm_l = []
+for idx, row in df_best_sub_ind_ch.iterrows():
+    cm_l.append(cm_res[row["sub"]][row["ch"]])
+
+disp = metrics.ConfusionMatrixDisplay(
+    confusion_matrix=np.array(cm_l).mean(axis=0),
+    display_labels=["Rest", "Neutral", "Pleasant", "Unpleasant"], #  
+)
+fig, ax = plt.subplots(figsize=(6,6), dpi=300)
+disp.plot(ax=ax)
+disp.ax_.set_title("Mean Best channel confusion matrix")
+#cbar = plt.colorbar()
+#cbar.set_label("Accuracy")
+plt.savefig(
+                "cm_4class_neu.pdf",
+                bbox_inches="tight",
+            )
+# correlate the BDI scores to the misclassified unpls -> ntr scores
+miss_unpl_ntr = np.array(cm_l)[:,3,3]
+bdi_scores = [33, 46, 35, 41, 22, 43, 36, 57]
+df_bdi_cm = pd.DataFrame()
+df_bdi_cm["miss_unpl"] = miss_unpl_ntr
+df_bdi_cm["bdi"] = bdi_scores
+nm_plots.reg_plot(x_col="miss_unpl", y_col="bdi", data=df_bdi_cm, out_path_save=None)
+
 
 
 
@@ -323,7 +367,7 @@ def plot_performance_best_ch(df):
         hue="ch_type",
         title="best channel performances",
         PATH_SAVE=os.path.join(r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\results\results_ntr_vs_emotion",
-        "per_sub.png")
+        "per_sub_3500.png")
     )
 
 
@@ -365,10 +409,10 @@ def plt_mean_accuracies_over_time(mean_acc: dict):
     # plot accuracies
     df_acc = pd.DataFrame()
 
-    arr_acc_pls = np.stack([f[0] for f in mean_acc])[:, :10]  # PLS
-    arr_acc_unpls = np.stack([f[1] for f in mean_acc])[:, :10]  # UNPLS
+    arr_acc_pls = np.stack([f[0] for f in mean_acc])[:, :35]  #10  PLS
+    arr_acc_unpls = np.stack([f[1] for f in mean_acc])[:, :35]  #10  UNPLS
     for i in range(arr_acc_pls.shape[0]):
-        for t in range(10):
+        for t in range(35):  # 10
             df_acc = df_acc.append(
                 {
                     "sub": i,
@@ -395,7 +439,7 @@ def plt_mean_accuracies_over_time(mean_acc: dict):
         y_col="Accuracy",
         title="Averaged Performances Best Channels",
         hue="Stimulus",
-        PATH_SAVE=r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\results\results_ntr_vs_emotion\acc_comp_sub.png",
+        PATH_SAVE=r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\results\results_ntr_vs_emotion\acc_comp_sub_3500.png",
     )
  
     sb.pointplot(x="Time [ms]", y="Accuracy", data=df_acc.groupby(["sub", "Stimulus", "Time [ms]"]).median().reset_index(), hue="Stimulus", palette="viridis",

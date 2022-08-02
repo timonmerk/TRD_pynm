@@ -13,18 +13,19 @@ from py_neuromodulation import nm_stream_offline, nm_define_nmchannels, nm_IO
 from yaml import load
 
 PATH_DATA_RAW = r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\raw_data"
-
+PATH_OUT = r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\features_computed"
+PATH_OUT = r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\features_computed_3500ms"
 
 def set_settings(settings: dict):
 
     settings["features"]["fft"] = True
-    settings["features"]["fooof"] = True
-    settings["features"]["return_raw"] = True
-    settings["features"]["raw_hjorth"] = True
-    settings["features"]["sharpwave_analysis"] = True
-    settings["features"]["nolds"] = True
-    settings["features"]["bursts"] = True
-    settings["features"]["coherence"] = True
+    settings["features"]["fooof"] = False#True
+    settings["features"]["return_raw"] = False#True
+    settings["features"]["raw_hjorth"] = False#True
+    settings["features"]["sharpwave_analysis"] = False#True
+    settings["features"]["nolds"] = False#True
+    settings["features"]["bursts"] = False#True
+    settings["features"]["coherence"] = False#True
 
     settings["preprocessing"]["re_referencing"] = False
     settings["preprocessing"]["preprocessing_order"] = [
@@ -140,8 +141,8 @@ def run_patient_GenericStream(f):
     # label_arr_epochs columns: ALL, NTR, PLS, UNPLS
     # integer_encoded_names: 0 - REST, 1 - NTR, 2 - PLS, 3 - UNPLS
 
-    arr_insert = np.repeat(label_arr_concat[:, :, np.newaxis], 1000, axis=2)
-    label_arr_epochs[:, :, 3500:4500] = arr_insert
+    arr_insert = np.repeat(label_arr_concat[:, :, np.newaxis], 1000, axis=2)  # 3501
+    label_arr_epochs[:, :, 3500:4500] = arr_insert  # 3500:4500
 
     data_comb = np.concatenate((data, label_arr_epochs), axis=1)
     data_stream = np.concatenate(data_comb, axis=1)
@@ -182,7 +183,7 @@ def run_patient_GenericStream(f):
     stream.run(
         data=data_stream,
         folder_name=file_name,
-        out_path_root=r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\features_computed",
+        out_path_root=PATH_OUT,
     )
 
 
