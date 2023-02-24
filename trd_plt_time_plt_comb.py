@@ -32,6 +32,16 @@ df_comb = pd.concat(
     [df_pls.reset_index(), df_pls_unpls.reset_index(), df_unpls.reset_index()]
 )
 
+# Paper performance report:
+print(df_comb.query("mode == 'ntr vs pls/unpls'")["performance_test"].mean())
+print(df_comb.query("mode == 'ntr vs pls/unpls'")["performance_test"].std())
+
+print(df_comb.query("mode == 'ntr vs pls'")["performance_test"].mean())
+print(df_comb.query("mode == 'ntr vs pls'")["performance_test"].std())
+
+print(df_comb.query("mode == 'ntr vs unpls'")["performance_test"].mean())
+print(df_comb.query("mode == 'ntr vs unpls'")["performance_test"].std())
+
 nm_plots.plot_df_subjects(
     df=df_comb,
     y_col="performance_test",
