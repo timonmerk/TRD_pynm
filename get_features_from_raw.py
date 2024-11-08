@@ -12,20 +12,22 @@ from py_neuromodulation import nm_stream_offline, nm_define_nmchannels, nm_IO
 
 from yaml import load
 
-PATH_DATA_RAW = r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\raw_data"
+PATH_DATA_RAW = (
+    r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\raw_data"
+)
 PATH_OUT = r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\features_computed"
 PATH_OUT = r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\features_computed_3500ms"
 
-def set_settings(settings: dict):
 
+def set_settings(settings: dict):
     settings["features"]["fft"] = True
-    settings["features"]["fooof"] = False#True
-    settings["features"]["return_raw"] = False#True
-    settings["features"]["raw_hjorth"] = False#True
-    settings["features"]["sharpwave_analysis"] = False#True
-    settings["features"]["nolds"] = False#True
-    settings["features"]["bursts"] = False#True
-    settings["features"]["coherence"] = False#True
+    settings["features"]["fooof"] = False  # True
+    settings["features"]["return_raw"] = False  # True
+    settings["features"]["raw_hjorth"] = False  # True
+    settings["features"]["sharpwave_analysis"] = False  # True
+    settings["features"]["nolds"] = False  # True
+    settings["features"]["bursts"] = False  # True
+    settings["features"]["coherence"] = False  # True
 
     settings["preprocessing"]["re_referencing"] = False
     settings["preprocessing"]["preprocessing_order"] = [
@@ -44,18 +46,10 @@ def set_settings(settings: dict):
     for key in list(
         settings["sharpwave_analysis_settings"]["sharpwave_features"].keys()
     ):
-        settings["sharpwave_analysis_settings"]["sharpwave_features"][
-            key
-        ] = True
-    settings["sharpwave_analysis_settings"]["sharpwave_features"][
-        "peak_left"
-    ] = False
-    settings["sharpwave_analysis_settings"]["sharpwave_features"][
-        "peak_right"
-    ] = False
-    settings["sharpwave_analysis_settings"]["sharpwave_features"][
-        "trough"
-    ] = False
+        settings["sharpwave_analysis_settings"]["sharpwave_features"][key] = True
+    settings["sharpwave_analysis_settings"]["sharpwave_features"]["peak_left"] = False
+    settings["sharpwave_analysis_settings"]["sharpwave_features"]["peak_right"] = False
+    settings["sharpwave_analysis_settings"]["sharpwave_features"]["trough"] = False
     settings["sharpwave_analysis_settings"][
         "apply_estimator_between_peaks_and_troughs"
     ] = True
@@ -101,7 +95,7 @@ def set_settings(settings: dict):
     return settings
 
 
-def run_patient_GenericStream(f):
+def run_patient_GenericStream(f, return_time: bool = False):
     """This function concatenates epochs from the .mat files
     Removes the "bad" segments
     The "Rest" segments not corresponding to a stimulus are added
@@ -147,6 +141,10 @@ def run_patient_GenericStream(f):
     data_comb = np.concatenate((data, label_arr_epochs), axis=1)
     data_stream = np.concatenate(data_comb, axis=1)
 
+    if return_time:
+        # return data_stream.shape[1] / (dat["fsample"] * 60)
+        return data_comb.shape[0]
+
     ch_names = list(dat["ch_names"])
     ch_names = ch_names + label_arr_epochs_names
 
@@ -188,8 +186,12 @@ def run_patient_GenericStream(f):
 
 
 def main():
-
     files = [f for f in os.listdir(PATH_DATA_RAW) if "_edit" in f]
+
+    # time_ = []
+    # for f in files:
+    #    time_.append(run_patient_GenericStream(f, return_time=True))
+
     run_patient_GenericStream(files[6])
 
     # for f in files:

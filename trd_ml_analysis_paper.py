@@ -40,7 +40,7 @@ PATH_RESULTS = r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysi
 subjects = [
     f for f in os.listdir(PATH_FEATURES) if f.startswith("effspm8") and "KSC" not in f
 ]
-GET_AVG_LABEL = True
+GET_AVG_LABEL = False
 pd_data = []
 
 PLS = -2
@@ -72,8 +72,8 @@ FIX_LABEL_TO_3500ms = False
 FIX_LABEL_TO_750_2300ms = False  # if both are false only the 1000ms
 FIX_LABEL_TO_1000_2200ms = False
 
-NTR_VS_EMOTION = True
-PLS_VS_UNPLS = False
+NTR_VS_EMOTION = False
+PLS_VS_UNPLS = True
 PLS_VS_UNPLS_VS_NTR = False
 PLS_VS_UNPLS_VS_NTR_VS_REST = False
 

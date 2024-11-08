@@ -4,7 +4,8 @@ import os
 from matplotlib import pyplot as plt
 import seaborn as sb
 
-from py_neuromodulation import nm_RMAP, nm_plots, nm_stats
+#from py_neuromodulation import nm_RMAP, nm_plots, nm_stats
+import nm_RMAP
 
 def get_performances_and_flattened_fingerprints(l_fps_names: list, df_ind_ch: pd.DataFrame):
 
@@ -38,10 +39,12 @@ path_out = (
     r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\scripts\Analysis connectomics"
 )
 
+path_out = r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\scripts\Analysis connectomics\conn_out\fixed_rmap"
+
 df_plt_corr = pd.DataFrame()
 for run_func in [False, True]:
     if run_func is True:
-        path_dir = r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\scripts\Analysis connectomics\new_conn_out\func_conn"
+        path_dir = r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\scripts\Analysis connectomics\conn_out\func_conn"
         l_fps_names, l_fps_dat = rmap.load_all_fingerprints(
             path_dir, cond_str="_AvgR_Fz.nii"
         )
@@ -49,7 +52,7 @@ for run_func in [False, True]:
         str_add = "func"
     else:
         path_dir = r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\scripts\Analysis connectomics\new_conn_out\str_conn_smooth_888" # str_conn_smooth
-
+        path_dir = r"C:\Users\ICN_admin\Documents\Paper Decoding Toolbox\TRD Analysis\scripts\Analysis connectomics\conn_out\str_conn_smooth_888"
         l_fps_names, l_fps_dat = rmap.load_all_fingerprints(path_dir, cond_str=None)
         l_fps_names = [l[1:] for l in l_fps_names]  # remove s for smoothed images
         rmap_name = "rmap_str_smoothed_888.nii"  # 
